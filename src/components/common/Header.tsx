@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Container } from "@/components/ui";
-import { MapPin, ChevronDown, Menu, X, Check } from "lucide-react";
+import { MapPin, ChevronDown, Menu, X, Check, User, Building2, ShieldCheck, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CITIES = [
@@ -22,17 +23,128 @@ const CITIES = [
 
 const NAV_LINKS = [
   { href: "/products", label: "Products" },
-  { href: "/collections", label: "Collections" },
-  { href: "/vendors", label: "Vendors" },
   { href: "/about", label: "About" },
 ];
 
+// ─── Role portal options ──────────────────────────────────────────────────────
+const PORTAL_OPTIONS = [
+  {
+    id: "customer",
+    label: "Customer",
+    desc: "Browse & inquire for your project",
+    icon: User,
+    href: "/signup",
+    iconBg: "bg-blue-500/10",
+    iconColor: "text-blue-600",
+    dotColor: "bg-blue-500",
+  },
+  {
+    id: "vendor",
+    label: "Vendor",
+    desc: "List inventory & manage orders",
+    icon: Building2,
+    href: "/vendor/register",
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-700",
+    dotColor: "bg-amber-500",
+  },
+  {
+    id: "admin",
+    label: "Admin",
+    desc: "Internal operations portal",
+    icon: ShieldCheck,
+    href: "/login",
+    iconBg: "bg-stone-dark/8",
+    iconColor: "text-stone-dark/60",
+    dotColor: "bg-stone-dark/40",
+  },
+] as const;
+
+// ─── Login dropdown ───────────────────────────────────────────────────────────
+function LoginDropdown({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+      transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="absolute top-full right-0 mt-2 w-72 bg-white border border-stone-dark/8 rounded-2xl shadow-luxury-lg z-50 overflow-hidden"
+    >
+      {/* Header */}
+      <div className="px-5 pt-4 pb-3 border-b border-stone-dark/5">
+        <p className="text-[10px] font-sans font-bold text-stone-dark/35 uppercase tracking-[0.18em]">
+          Sign in as
+        </p>
+      </div>
+
+      {/* Options */}
+      <div className="p-2">
+        {PORTAL_OPTIONS.map((opt, i) => {
+          const Icon = opt.icon;
+          return (
+            <motion.button
+              key={opt.id}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.06, duration: 0.18 }}
+              onClick={() => {
+                onClose();
+                router.push(opt.href);
+              }}
+              className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl hover:bg-stone-dark/4 transition-colors duration-150 group text-left"
+            >
+              {/* Icon */}
+              <div className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${opt.iconBg}`}>
+                <Icon size={16} className={opt.iconColor} />
+              </div>
+
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-sans font-semibold text-[13.5px] text-stone-950 leading-tight">
+                    {opt.label}
+                  </p>
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${opt.dotColor}`} />
+                </div>
+                <p className="font-sans text-[11.5px] text-stone-dark/40 mt-0.5 leading-snug">
+                  {opt.desc}
+                </p>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex-shrink-0 text-stone-dark/20 group-hover:text-amber-gold group-hover:translate-x-0.5 transition-all duration-150">
+                <ChevronDown size={14} className="-rotate-90" />
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Footer: existing users */}
+      <div className="px-5 py-3 border-t border-stone-dark/5 bg-stone-dark/[0.015]">
+        <p className="font-sans text-[12px] text-stone-dark/40 text-center">
+          Already have an account?{" "}
+          <button
+            onClick={() => { onClose(); router.push("/login"); }}
+            className="text-amber-gold hover:text-amber-gold/70 font-semibold transition-colors"
+          >
+            Sign in
+          </button>
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
 export function Header() {
   const [cityOpen, setCityOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState("mumbai");
   const [scrolled, setScrolled] = useState(false);
   const cityRef = useRef<HTMLDivElement>(null);
+  const loginRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fromCookie = document.cookie
@@ -53,6 +165,9 @@ export function Header() {
       if (cityRef.current && !cityRef.current.contains(e.target as Node)) {
         setCityOpen(false);
       }
+      if (loginRef.current && !loginRef.current.contains(e.target as Node)) {
+        setLoginOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -71,8 +186,8 @@ export function Header() {
       className={cn(
         "sticky top-0 z-50 transition-all duration-300",
         scrolled
-          ? "bg-stone-light/98 backdrop-blur-md shadow-luxury border-b border-stone-dark/10"
-          : "bg-stone-light/95 backdrop-blur-sm border-b border-stone-dark/5"
+          ? "bg-stone-light shadow-luxury border-b border-stone-dark/10"
+          : "bg-stone-light border-b border-stone-dark/8"
       )}
     >
       <Container>
@@ -199,14 +314,35 @@ export function Header() {
               </AnimatePresence>
             </div>
 
-            {/* Primary CTA */}
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="hidden sm:flex btn-luxury text-sm font-medium rounded-xl px-5 py-2.5 whitespace-nowrap"
-            >
-              Get a Quote
-            </motion.button>
+            {/* Login / Portal selector */}
+            <div className="relative hidden sm:block" ref={loginRef}>
+              <motion.button
+                onClick={() => { setLoginOpen((v) => !v); setCityOpen(false); }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border font-sans text-sm font-semibold transition-all duration-200 whitespace-nowrap",
+                  loginOpen
+                    ? "bg-stone-950 text-white border-stone-950 shadow-sm"
+                    : "bg-stone-950 text-white border-stone-950 hover:bg-stone-dark shadow-sm"
+                )}
+              >
+                <LogIn size={14} />
+                Sign In
+                <motion.div
+                  animate={{ rotate: loginOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown size={12} className="opacity-70" />
+                </motion.div>
+              </motion.button>
+
+              <AnimatePresence>
+                {loginOpen && (
+                  <LoginDropdown onClose={() => setLoginOpen(false)} />
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Mobile hamburger */}
             <motion.button
@@ -272,36 +408,42 @@ export function Header() {
                   </motion.div>
                 ))}
 
-                <div className="pt-3 mt-1 border-t border-stone-dark/5">
-                  <div className="flex items-center justify-between px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <MapPin size={13} className="text-amber-gold" />
-                      <div>
-                        <p className="text-[9px] text-stone-dark/40 uppercase tracking-widest">
-                          Delivering to
-                        </p>
-                        <p className="text-sm font-semibold text-stone-950">
-                          {activeCity?.name}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      className="text-xs text-amber-gold font-medium hover:underline underline-offset-2"
-                      onClick={() => {
-                        setMobileOpen(false);
-                        setTimeout(() => setCityOpen(true), 300);
-                      }}
-                    >
-                      Change
-                    </button>
-                  </div>
+                <div className="pt-3 mt-1 border-t border-stone-dark/5 space-y-1 px-2">
+                  <p className="px-2 py-1 text-[10px] font-sans font-bold text-stone-dark/35 uppercase tracking-[0.18em]">
+                    Sign in as
+                  </p>
+                  {PORTAL_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    return (
+                      <Link
+                        key={opt.id}
+                        href={opt.href}
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-stone-dark/5 transition-colors"
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${opt.iconBg}`}>
+                          <Icon size={14} className={opt.iconColor} />
+                        </div>
+                        <div>
+                          <p className="font-sans font-semibold text-[13px] text-stone-950">{opt.label}</p>
+                          <p className="font-sans text-[11px] text-stone-dark/40">{opt.desc}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
 
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    className="mx-4 mt-2 w-[calc(100%-2rem)] btn-luxury text-sm font-medium rounded-xl py-3"
-                  >
-                    Get a Quote
-                  </motion.button>
+                  <div className="px-2 pt-2 pb-1">
+                    <p className="font-sans text-[12px] text-stone-dark/40 text-center">
+                      Already have an account?{" "}
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileOpen(false)}
+                        className="text-amber-gold font-semibold"
+                      >
+                        Sign in
+                      </Link>
+                    </p>
+                  </div>
                 </div>
               </div>
             </Container>
