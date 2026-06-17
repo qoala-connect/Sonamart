@@ -290,10 +290,12 @@ function ComingSoon({ label }: { label: string }) {
 export function AdminPortal({
   pendingVendors,
   pendingProducts,
+  registeredVendors,
   adminName,
 }: {
   pendingVendors: VendorApplication[];
   pendingProducts: PendingProduct[];
+  registeredVendors: VendorApplication[];
   adminName: string;
 }) {
   const [active, setActive] = useState<NavId>("crm");
@@ -347,7 +349,7 @@ export function AdminPortal({
               </div>
             )}
             {active === "vendors" && (
-              <VendorApprovalSection initialVendors={pendingVendors} />
+              <VendorApprovalSection initialVendors={pendingVendors} registeredVendors={registeredVendors} />
             )}
             {active === "products" && (
               <ProductReviewSection initialProducts={pendingProducts} />

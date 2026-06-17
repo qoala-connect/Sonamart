@@ -79,6 +79,30 @@ export async function getAllVendors(): Promise<VendorApplication[]> {
   return rows;
 }
 
+export async function getRegisteredVendors(): Promise<VendorApplication[]> {
+  await requireAdmin();
+  const { rows } = await db.query(`
+    SELECT
+      u.id            AS "userId",
+      u.name,
+      u.email,
+      u.status,
+      u."createdAt",
+      vp."companyName",
+      vp."contactPerson",
+      vp.phone,
+      vp."gstNumber",
+      vp."businessAddress",
+      vp.city,
+      COALESCE(vp."documentUrls", '{}') AS "documentUrls"
+    FROM "user" u
+    LEFT JOIN vendor_profiles vp ON vp."userId" = u.id
+    WHERE u.role = 'VENDOR' AND u.status = 'ACTIVE'
+    ORDER BY u."createdAt" DESC
+  `);
+  return rows;
+}
+
 // ─── Product review ────────────────────────────────────────────────────────────
 export type PendingProduct = {
   id: string;
