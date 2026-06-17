@@ -164,9 +164,11 @@ export function AIImageSearchModal({ isOpen, onClose, onSearchComplete }: AIImag
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-md"
           onClick={modalState === "idle" ? onClose : undefined}
         >
+          {/* Inner centering flex — min-h-full keeps flex-center working when modal is shorter than viewport */}
+          <div className="min-h-full flex items-center justify-center px-4 py-20">
           {/* Modal — stop propagation so clicks inside don't close */}
           <motion.div
             initial={{ opacity: 0, scale: 0.93, y: 24 }}
@@ -176,7 +178,7 @@ export function AIImageSearchModal({ isOpen, onClose, onSearchComplete }: AIImag
             className="w-full max-w-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-[#0f0f0f] rounded-3xl shadow-[0_32px_100px_rgba(0,0,0,0.7)] overflow-hidden max-h-[88vh] flex flex-col">
+            <div className="bg-[#0f0f0f] rounded-3xl shadow-[0_32px_100px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col">
 
               {/* ── Header ── */}
               <div className="relative flex items-center justify-between px-6 py-4 border-b border-white/8">
@@ -628,6 +630,7 @@ export function AIImageSearchModal({ isOpen, onClose, onSearchComplete }: AIImag
               </div>
             </div>
           </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
