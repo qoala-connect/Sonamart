@@ -208,6 +208,11 @@ export function VendorRegisterForm() {
     if (n === 2) {
       if (!s2.companyName.trim()) errs.companyName = "Required";
       if (!s2.phone.trim()) errs.phone = "Required";
+      if (!s2.gstNumber.trim()) {
+        errs.gstNumber = "GST number is required";
+      } else if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(s2.gstNumber.trim())) {
+        errs.gstNumber = "Enter a valid 15-character GST number";
+      }
     }
     if (n === 3) {
       if (!s3.businessAddress.trim()) errs.businessAddress = "Required";
@@ -460,12 +465,13 @@ export function VendorRegisterForm() {
                 </div>
               </FormField>
 
-              <FormField label="GST Number (optional)">
+              <FormField label="GST Number" error={fieldErrors.gstNumber}>
                 <AuthInput
                   type="text"
                   placeholder="27AADCS0472N1Z1"
                   value={s2.gstNumber}
                   onChange={(e) => setS2((p) => ({ ...p, gstNumber: e.target.value.toUpperCase() }))}
+                  error={!!fieldErrors.gstNumber}
                   className="font-mono tracking-wider"
                 />
               </FormField>
@@ -473,7 +479,7 @@ export function VendorRegisterForm() {
               <div className="p-3.5 bg-blue-50 border border-blue-200/50 rounded-xl">
                 <p className="text-[12px] font-sans text-blue-700 leading-relaxed">
                   <Shield size={12} className="inline mr-1.5 -mt-0.5 text-blue-500" />
-                  Your GST registration accelerates approval and increases buyer trust.
+                  GST registration is mandatory to list and sell on Stonamart.
                 </p>
               </div>
             </motion.div>

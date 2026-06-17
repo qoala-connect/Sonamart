@@ -20,6 +20,7 @@ export type VendorApplication = {
   gstNumber: string | null;
   businessAddress: string | null;
   city: string | null;
+  documentUrls: string[];
   createdAt: string;
 };
 
@@ -44,7 +45,8 @@ export async function getPendingVendors(): Promise<VendorApplication[]> {
       vp.phone,
       vp."gstNumber",
       vp."businessAddress",
-      vp.city
+      vp.city,
+      COALESCE(vp."documentUrls", '{}') AS "documentUrls"
     FROM "user" u
     LEFT JOIN vendor_profiles vp ON vp."userId" = u.id
     WHERE u.role = 'VENDOR' AND u.status = 'PENDING'
@@ -67,7 +69,8 @@ export async function getAllVendors(): Promise<VendorApplication[]> {
       vp.phone,
       vp."gstNumber",
       vp."businessAddress",
-      vp.city
+      vp.city,
+      COALESCE(vp."documentUrls", '{}') AS "documentUrls"
     FROM "user" u
     LEFT JOIN vendor_profiles vp ON vp."userId" = u.id
     WHERE u.role = 'VENDOR'
