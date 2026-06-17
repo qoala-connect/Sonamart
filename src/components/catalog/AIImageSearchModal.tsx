@@ -168,7 +168,7 @@ export function AIImageSearchModal({ isOpen, onClose, onSearchComplete }: AIImag
           onClick={modalState === "idle" ? onClose : undefined}
         >
           {/* Inner centering flex — min-h-full keeps flex-center working when modal is shorter than viewport */}
-          <div className="min-h-full flex items-center justify-center px-4 py-20">
+          <div className="min-h-full flex items-start justify-center px-4 pt-28 pb-10">
           {/* Modal — stop propagation so clicks inside don't close */}
           <motion.div
             initial={{ opacity: 0, scale: 0.93, y: 24 }}
