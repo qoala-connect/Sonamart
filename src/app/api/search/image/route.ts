@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
     (async () => {
       const { embedImageBuffer, toVectorLiteral } = await import("@/lib/clip");
       const embedding = await embedImageBuffer(buffer, mimeType);
-      return toVectorLiteral(embedding);
+      return embedding ? toVectorLiteral(embedding) : null;
     })(),
   ]);
 
