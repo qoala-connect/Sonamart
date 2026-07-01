@@ -77,6 +77,11 @@ export async function POST(request: NextRequest) {
     const imageUrl = row.imageUrls[0];
     try {
       const embedding = await embedImageUrl(imageUrl);
+      if (!embedding) {
+        results.push({ id: row.id, name: row.name, ok: false, error: "CLIP embedding unavailable" });
+        continue;
+      }
+
       await db.query(
         `UPDATE products SET embedding = $1::vector WHERE id = $2`,
         [toVectorLiteral(embedding), row.id]

@@ -204,6 +204,8 @@ async function generateEmbeddingBackground(productId: string, imageUrl: string) 
   try {
     const { embedImageUrl, toVectorLiteral } = await import("./clip");
     const embedding = await embedImageUrl(imageUrl);
+    if (!embedding) return;
+
     await db.query(
       `UPDATE products SET embedding = $1::vector WHERE id = $2`,
       [toVectorLiteral(embedding), productId]
