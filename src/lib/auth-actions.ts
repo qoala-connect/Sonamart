@@ -132,38 +132,46 @@ export async function loginAction(
   console.log("[loginAction] Step 4: Querying DB for user role and status.");
   // Query DB directly for role/status — signInEmail return value may omit
   // custom fields when using the nextCookies() plugin.
+  let userRole = "CUSTOMER";
+  let userStatus = "ACTIVE";
+
   try {
     const { rows } = await db.query(
       `SELECT role, status FROM "user" WHERE email = $1 LIMIT 1`,
       [email]
     );
-    const userRole   = (rows[0]?.role   as string) ?? "CUSTOMER";
-    const userStatus = (rows[0]?.status as string) ?? "ACTIVE";
+    userRole = (rows[0]?.role as string) ?? "CUSTOMER";
+    userStatus = (rows[0]?.status as string) ?? "ACTIVE";
     console.log(`[loginAction] User found: Role=${userRole}, Status=${userStatus}`);
-
-    if (userStatus === "INACTIVE") {
-      console.log("[loginAction] Redirecting to /suspended (INACTIVE user).");
-      redirect("/suspended");
-    }
-    if (userRole === "ADMIN") {
-      console.log("[loginAction] Redirecting to /admin/dashboard (ADMIN user).");
-      redirect("/admin/dashboard");
-    }
-    if (userRole === "VENDOR") {
-      if (userStatus === "PENDING") {
-        console.log("[loginAction] Redirecting to /vendor/pending (PENDING VENDOR user).");
-        redirect("/vendor/pending");
-      }
-      console.log("[loginAction] Redirecting to /vendor/dashboard (ACTIVE VENDOR user).");
-      redirect("/vendor/dashboard");
-    }
-    console.log("[loginAction] Redirecting to /account (CUSTOMER user).");
-    redirect("/account");
   } catch (dbQueryErr) {
     console.error("[loginAction] Failed to query user role/status from DB:", dbQueryErr);
     const errorMessage = "Failed to retrieve user details after login.";
-    return { error: process.env.NODE_ENV !== 'production' ? `${errorMessage} Details: ${String(dbQueryErr)}` : "An unexpected error occurred. Please try again." };
+    return {
+      error:
+        process.env.NODE_ENV !== "production"
+          ? `${errorMessage} Details: ${String(dbQueryErr)}`
+          : "An unexpected error occurred. Please try again.",
+    };
   }
+
+  if (userStatus === "INACTIVE") {
+    console.log("[loginAction] Redirecting to /suspended (INACTIVE user).");
+    redirect("/suspended");
+  }
+  if (userRole === "ADMIN") {
+    console.log("[loginAction] Redirecting to /admin/dashboard (ADMIN user).");
+    redirect("/admin/dashboard");
+  }
+  if (userRole === "VENDOR") {
+    if (userStatus === "PENDING") {
+      console.log("[loginAction] Redirecting to /vendor/pending (PENDING VENDOR user).");
+      redirect("/vendor/pending");
+    }
+    console.log("[loginAction] Redirecting to /vendor/dashboard (ACTIVE VENDOR user).");
+    redirect("/vendor/dashboard");
+  }
+  console.log("[loginAction] Redirecting to /account (CUSTOMER user).");
+  redirect("/account");
 }
 
 // ─── CUSTOMER SIGNUP ──────────────────────────────────────────────────────────
