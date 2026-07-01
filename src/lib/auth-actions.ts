@@ -116,8 +116,14 @@ export async function loginAction(
   ];
   const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
   if (missingEnvVars.length > 0) {
-    const errorMessage = `Missing required environment variables: ${missingEnvVars.join(", ")}.`;
+    const errorMessage = `Missing required server environment variables: ${missingEnvVars.join(
+      ", "
+    )}.`;
     console.error(`[loginAction] ${errorMessage}`);
+    // Fail fast to make the issue obvious during development
+    return {
+      error: process.env.NODE_ENV !== 'production' ? `Configuration Error: ${errorMessage}` : "Server configuration error. Please contact support.",
+    };
   }
   console.log("[loginAction] Environment check complete.");
 
