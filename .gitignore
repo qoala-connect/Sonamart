@@ -36,3 +36,11 @@ next-env.d.ts
 
 # CLIP model cache (downloaded by @xenova/transformers on first use)
 /.transformers-cache
+
+.vercel
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
