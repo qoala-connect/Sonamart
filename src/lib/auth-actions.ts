@@ -94,7 +94,7 @@ async function handleLoginFailure(
   password: string
 ): Promise<AuthActionState> {
   const msg = err instanceof Error ? err.message : String(err);
-  console.error("[loginAction] Initial signInEmail failed:", msg);
+  console.error("[loginAction] Initial signInEmail failed:", err);
 
   const needsPasswordRepair = /invalid|unauthorized|password/i.test(msg);
   if (!needsPasswordRepair) {
@@ -135,7 +135,7 @@ async function handleLoginFailure(
   } catch (retryErr: unknown) {
     const retryMsg =
       retryErr instanceof Error ? retryErr.message : String(retryErr);
-    console.error("[loginAction] signInEmail retry failed:", retryMsg);
+    console.error("[loginAction] signInEmail retry failed:", retryErr);
     return {
       error:
         process.env.NODE_ENV !== "production"
