@@ -56,95 +56,6 @@ export async function getR2PresignedUrl(
   return { url, key };
 }
 
-async function repairCredentialPasswordForUser(email: string, password: string) {
-  try {
-    const normalizedEmail = email.toLowerCase().trim();
-    const { rows: userRows } = await db.query(
-      `SELECT id FROM "user" WHERE LOWER(email) = $1 LIMIT 1`,
-      [normalizedEmail]
-    );
-
-    const userId = userRows[0]?.id as string | undefined;
-    if (!userId) return false;
-
-    const { rows: accountRows } = await db.query(
-      `SELECT id FROM account WHERE "userId" = $1 AND "providerId" = 'credential' LIMIT 1`,
-      [userId]
-    );
-
-    const accountId = accountRows[0]?.id as string | undefined;
-    if (!accountId) return false;
-
-    const hashedPassword = await hashPassword(password);
-    await db.query(
-      `UPDATE account SET "password" = $1, "updatedAt" = NOW() WHERE id = $2`,
-      [hashedPassword, accountId]
-    );
-
-    return true;
-  } catch (repairErr) {
-    console.error("[loginAction] Failed to repair credential password hash:", repairErr);
-    return false;
-  }
-}
-
-async function handleLoginFailure(
-  err: unknown,
-  email: string,
-  password: string
-): Promise<AuthActionState> {
-  const msg = err instanceof Error ? err.message : String(err);
-  console.error("[loginAction] Initial signInEmail failed:", err);
-
-  const needsPasswordRepair = /invalid|unauthorized|password/i.test(msg);
-  if (!needsPasswordRepair) {
-    return {
-      error:
-        process.env.NODE_ENV !== "production"
-          ? `Login failed: ${msg}`
-          : "Invalid email or password. Please try again.",
-    };
-  }
-
-  console.log(
-    "[loginAction] Possible password hash mismatch. Attempting repair for user:",
-    email
-  );
-  const repaired = await repairCredentialPasswordForUser(email, password);
-  if (!repaired) {
-    console.warn("[loginAction] Password repair failed or was not possible.");
-    return {
-      error:
-        process.env.NODE_ENV !== "production"
-          ? `Login failed: ${msg}`
-          : "Invalid email or password. Please try again.",
-    };
-  }
-
-  console.log("[loginAction] Password repair successful. Retrying login.");
-  try {
-    await auth.api.signInEmail({
-      body: { email, password },
-      headers: await headers(),
-    });
-    console.log(
-      "[loginAction] Better Auth signInEmail succeeded after password repair."
-    );
-    // If successful, return an empty object, letting the main function continue.
-    return {};
-  } catch (retryErr: unknown) {
-    const retryMsg =
-      retryErr instanceof Error ? retryErr.message : String(retryErr);
-    console.error("[loginAction] signInEmail retry failed:", retryErr);
-    return {
-      error:
-        process.env.NODE_ENV !== "production"
-          ? `Login failed after retry: ${retryMsg}`
-          : "Invalid email or password. Please try again.",
-    };
-  }
-}
-
 function redirectUserBasedOnRole(role: string, status: string): never {
   console.log(`[redirectUser] Redirecting user with Role=${role}, Status=${status}`);
   if (status === "INACTIVE") redirect("/suspended");
@@ -227,18 +138,19 @@ export async function loginAction(
   // --- Step 3: Attempt to sign in via Better Auth ---
   console.log("[loginAction] Step 3: Attempting to sign in with Better Auth.");
   try {
-    const requestHeaders = await headers();
-    console.log("[loginAction] Request headers for signInEmail:", Object.fromEntries(requestHeaders.entries()));
-
     await auth.api.signInEmail({
       body: { email: normalizedEmail, password },
-      headers: requestHeaders,
+      headers: await headers(),
     });
     console.log("[loginAction] Better Auth signInEmail successful.");
   } catch (err: unknown) {
-    const result = await handleLoginFailure(err, normalizedEmail, password);
-    // If the handler returns an error, stop the execution and return it to the UI.
-    if (result.error) return result;
+    // The complex password repair logic has been removed for simplification
+    // and to prevent potential issues like overwriting correct passwords.
+    // The root cause is likely a configuration issue (env vars, trusted origins).
+    console.error("[loginAction] signInEmail failed:", err);
+    return {
+      error: "Invalid email or password. Please try again.",
+    };
   }
 
   // --- Step 4: Query DB for user role/status and redirect ---
