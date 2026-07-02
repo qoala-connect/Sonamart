@@ -121,8 +121,17 @@ export async function loginAction(
   try {
     await db.query('SELECT 1');
     console.log("[loginAction] PostgreSQL connection successful.");
-  } catch (dbErr) {
-    console.warn("[loginAction] PostgreSQL connection check failed (continuing without hard stop):", dbErr);
+  } catch (dbErr: unknown) {
+    const dbErrorMsg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+    console.error(
+      "[loginAction] Critical: PostgreSQL connection check failed. This is the full error object and is likely the cause of the login failure. Check your Vercel logs for this output:",
+      dbErr
+    );
+    return {
+      error: isProduction
+        ? "A server database error occurred. Please contact support."
+        : `Database connection failed: ${dbErrorMsg}`,
+    };
   }
 
   // Sign out any existing session first — avoids cookie conflicts when
@@ -147,9 +156,15 @@ export async function loginAction(
     // The complex password repair logic has been removed for simplification
     // and to prevent potential issues like overwriting correct passwords.
     // The root cause is likely a configuration issue (env vars, trusted origins).
-    console.error("[loginAction] signInEmail failed:", err);
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(
+      "[loginAction] signInEmail failed. This is the full error object. Check your Vercel logs for this output:",
+      err
+    );
     return {
-      error: "Invalid email or password. Please try again.",
+      error: isProduction
+        ? "Invalid email or password. Please try again."
+        : `Login failed: ${errorMsg}`,
     };
   }
 
@@ -169,7 +184,10 @@ export async function loginAction(
     userStatus = (rows[0]?.status as string) ?? "ACTIVE";
     console.log(`[loginAction] User found: Role=${userRole}, Status=${userStatus}`);
   } catch (dbQueryErr) {
-    console.error("[loginAction] Failed to query user role/status from DB:", dbQueryErr);
+    console.error(
+      "[loginAction] Failed to query user role/status from DB. This is the full error object. Check your Vercel logs for this output:",
+      dbQueryErr
+    );
     const errorMessage = "Failed to retrieve user details after login.";
     return {
       error:
