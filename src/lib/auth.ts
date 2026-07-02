@@ -1,21 +1,11 @@
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
+import { getBaseUrl } from "./config";
 
-const isProduction = process.env.NODE_ENV === "production";
-
-const resolvedAppUrl = isProduction
-  ? process.env.NEXT_PUBLIC_APP_URL_PROD ??
-    process.env.BETTER_AUTH_URL_PROD ??
-    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined) ??
-    "https://sonamart.vercel.app"
-  : process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.BETTER_AUTH_URL ??
-    "http://127.0.0.1:3000";
-
-if (!process.env.BETTER_AUTH_URL) {
-  process.env.BETTER_AUTH_URL = resolvedAppUrl;
-}
+const resolvedAppUrl = getBaseUrl();
+// Set the base URL for better-auth to use internally
+process.env.BETTER_AUTH_URL = resolvedAppUrl;
 
 // ─── Better Auth server configuration ────────────────────────────────────────
 export const auth = betterAuth({

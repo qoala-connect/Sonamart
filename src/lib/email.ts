@@ -1,3 +1,5 @@
+import { getBaseUrl } from "./config";
+
 export async function sendProductRequestEmail(
   vendor: { name: string; email: string; companyName?: string | null },
   request: {
@@ -19,11 +21,7 @@ export async function sendProductRequestEmail(
     return;
   }
 
-  const isProduction = process.env.NODE_ENV === "production";
-  const baseUrl = isProduction
-    ? process.env.NEXT_PUBLIC_APP_URL_PROD ?? "https://sonamart.vercel.app"
-    : process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
+  const baseUrl = getBaseUrl();
   const respondUrl = `${baseUrl}/vendor/requests?requestId=${request.id}`;
 
   const budgetText =
