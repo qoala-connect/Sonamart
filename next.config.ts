@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  // Add Turbopack configuration to handle aliases needed by @xenova/transformers.
+  // This resolves the build error on Vercel where Turbopack is the default builder.
+  turbopack: {
+    resolveAlias: {
+      sharp: "next/dist/build/swc/empty",
+      "onnxruntime-node": "next/dist/build/swc/empty",
+    },
+  },
   serverExternalPackages: ["@xenova/transformers", "onnxruntime-web"],
 };
 
