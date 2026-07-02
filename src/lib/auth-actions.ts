@@ -88,6 +88,74 @@ async function repairCredentialPasswordForUser(email: string, password: string) 
   }
 }
 
+async function handleLoginFailure(
+  err: unknown,
+  email: string,
+  password: string
+): Promise<AuthActionState> {
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error("[loginAction] Initial signInEmail failed:", msg);
+
+  const needsPasswordRepair = /invalid|unauthorized|password/i.test(msg);
+  if (!needsPasswordRepair) {
+    return {
+      error:
+        process.env.NODE_ENV !== "production"
+          ? `Login failed: ${msg}`
+          : "Invalid email or password. Please try again.",
+    };
+  }
+
+  console.log(
+    "[loginAction] Possible password hash mismatch. Attempting repair for user:",
+    email
+  );
+  const repaired = await repairCredentialPasswordForUser(email, password);
+  if (!repaired) {
+    console.warn("[loginAction] Password repair failed or was not possible.");
+    return {
+      error:
+        process.env.NODE_ENV !== "production"
+          ? `Login failed: ${msg}`
+          : "Invalid email or password. Please try again.",
+    };
+  }
+
+  console.log("[loginAction] Password repair successful. Retrying login.");
+  try {
+    await auth.api.signInEmail({
+      body: { email, password },
+      headers: await headers(),
+    });
+    console.log(
+      "[loginAction] Better Auth signInEmail succeeded after password repair."
+    );
+    // If successful, return an empty object, letting the main function continue.
+    return {};
+  } catch (retryErr: unknown) {
+    const retryMsg =
+      retryErr instanceof Error ? retryErr.message : String(retryErr);
+    console.error("[loginAction] signInEmail retry failed:", retryMsg);
+    return {
+      error:
+        process.env.NODE_ENV !== "production"
+          ? `Login failed after retry: ${retryMsg}`
+          : "Invalid email or password. Please try again.",
+    };
+  }
+}
+
+function redirectUserBasedOnRole(role: string, status: string): never {
+  console.log(`[redirectUser] Redirecting user with Role=${role}, Status=${status}`);
+  if (status === "INACTIVE") redirect("/suspended");
+  if (role === "ADMIN") redirect("/admin/dashboard");
+  if (role === "VENDOR") {
+    if (status === "PENDING") redirect("/vendor/pending");
+    redirect("/vendor/dashboard");
+  }
+  redirect("/account");
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 export async function loginAction(
   _prevState: AuthActionState,
@@ -106,15 +174,22 @@ export async function loginAction(
 
   // --- Step 1: Check required environment variables ---
   console.log("[loginAction] Step 1: Checking environment variables.");
+  const isProduction = process.env.NODE_ENV === "production";
   const requiredEnvVars = [
     "BETTER_AUTH_SECRET",
-    "BETTER_AUTH_URL",
-    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_URL", // Crucial for Better Auth's trustedOrigins
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY", // Used by supabaseAdmin for privileged operations
     "DATABASE_URL", // Absolutely essential for better-auth to query users
-    "NEXT_PUBLIC_APP_URL", // Crucial for Better Auth's trustedOrigins
   ];
+
+  // Dynamically check for the correct URL variables based on the environment
+  if (isProduction) {
+    requiredEnvVars.push("BETTER_AUTH_URL_PROD", "NEXT_PUBLIC_APP_URL_PROD");
+  } else {
+    requiredEnvVars.push("BETTER_AUTH_URL", "NEXT_PUBLIC_APP_URL");
+  }
+
   const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
   if (missingEnvVars.length > 0) {
     const errorMessage = `Missing required server environment variables: ${missingEnvVars.join(
@@ -123,7 +198,9 @@ export async function loginAction(
     console.error(`[loginAction] ${errorMessage}`);
     // Fail fast to make the issue obvious during development
     return {
-      error: process.env.NODE_ENV !== 'production' ? `Configuration Error: ${errorMessage}` : "Server configuration error. Please contact support.",
+      error: !isProduction
+        ? `Configuration Error: ${errorMessage}`
+        : "Server configuration error. Please contact support.",
     };
   }
   console.log("[loginAction] Environment check complete.");
@@ -159,31 +236,9 @@ export async function loginAction(
     });
     console.log("[loginAction] Better Auth signInEmail successful.");
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[loginAction] signInEmail failed:", msg);
-
-    const needsPasswordRepair = /invalid|unauthorized|password/i.test(msg);
-    if (needsPasswordRepair) {
-      const repaired = await repairCredentialPasswordForUser(normalizedEmail, password);
-      if (repaired) {
-        try {
-          const requestHeaders = await headers();
-          await auth.api.signInEmail({
-            body: { email: normalizedEmail, password },
-            headers: requestHeaders,
-          });
-          console.log("[loginAction] Better Auth signInEmail succeeded after password repair.");
-        } catch (retryErr: unknown) {
-          const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-          console.error("[loginAction] signInEmail retry failed:", retryMsg);
-          return { error: process.env.NODE_ENV !== 'production' ? `Login failed: ${retryMsg}` : "Invalid email or password. Please try again." };
-        }
-      } else {
-        return { error: process.env.NODE_ENV !== 'production' ? `Login failed: ${msg}` : "Invalid email or password. Please try again." };
-      }
-    } else {
-      return { error: process.env.NODE_ENV !== 'production' ? `Login failed: ${msg}` : "Invalid email or password. Please try again." };
-    }
+    const result = await handleLoginFailure(err, normalizedEmail, password);
+    // If the handler returns an error, stop the execution and return it to the UI.
+    if (result.error) return result;
   }
 
   // --- Step 4: Query DB for user role/status and redirect ---
@@ -212,24 +267,7 @@ export async function loginAction(
     };
   }
 
-  if (userStatus === "INACTIVE") {
-    console.log("[loginAction] Redirecting to /suspended (INACTIVE user).");
-    redirect("/suspended");
-  }
-  if (userRole === "ADMIN") {
-    console.log("[loginAction] Redirecting to /admin/dashboard (ADMIN user).");
-    redirect("/admin/dashboard");
-  }
-  if (userRole === "VENDOR") {
-    if (userStatus === "PENDING") {
-      console.log("[loginAction] Redirecting to /vendor/pending (PENDING VENDOR user).");
-      redirect("/vendor/pending");
-    }
-    console.log("[loginAction] Redirecting to /vendor/dashboard (ACTIVE VENDOR user).");
-    redirect("/vendor/dashboard");
-  }
-  console.log("[loginAction] Redirecting to /account (CUSTOMER user).");
-  redirect("/account");
+  redirectUserBasedOnRole(userRole, userStatus);
 }
 
 // ─── CUSTOMER SIGNUP ──────────────────────────────────────────────────────────

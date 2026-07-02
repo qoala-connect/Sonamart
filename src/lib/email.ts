@@ -19,7 +19,11 @@ export async function sendProductRequestEmail(
     return;
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://stonamart.com"; // Use NEXT_PUBLIC_APP_URL for consistency
+  const isProduction = process.env.NODE_ENV === "production";
+  const baseUrl = isProduction
+    ? process.env.NEXT_PUBLIC_APP_URL_PROD ?? "https://sonamart.vercel.app"
+    : process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
   const respondUrl = `${baseUrl}/vendor/requests?requestId=${request.id}`;
 
   const budgetText =

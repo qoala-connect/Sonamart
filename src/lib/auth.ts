@@ -2,26 +2,25 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
 
-const resolvedAppUrl =
-  process.env.NEXT_PUBLIC_APP_URL ?? // Primary public URL, e.g., https://www.yourdomain.com
-  process.env.BETTER_AUTH_URL ??
-  process.env.NEXT_PUBLIC_VERCEL_URL ?? // Vercel specific public URL, e.g., https://your-app.vercel.app
-  process.env.BETTER_AUTH_URL_PROD ??
-  process.env.NEXT_PUBLIC_APP_URL_PROD ??
-  process.env.NEXT_PUBLIC_BASE_URL ??
-  process.env.NEXT_PUBLIC_BASE_URL_PROD ??
-  "http://127.0.0.1:3000";
+const isProduction = process.env.NODE_ENV === "production";
+
+const resolvedAppUrl = isProduction
+  ? process.env.NEXT_PUBLIC_APP_URL_PROD ??
+    process.env.BETTER_AUTH_URL_PROD ??
+    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined) ??
+    "https://sonamart.vercel.app"
+  : process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.BETTER_AUTH_URL ??
+    "http://127.0.0.1:3000";
 
 if (!process.env.BETTER_AUTH_URL) {
   process.env.BETTER_AUTH_URL = resolvedAppUrl;
 }
 
 // ─── Better Auth server configuration ────────────────────────────────────────
-// Connects to Supabase PostgreSQL via DATABASE_URL (service role connection).
-// The nextCookies() plugin enables automatic cookie management in
-// Next.js Server Actions, Server Components, and Route Handlers.
 export const auth = betterAuth({
   database: db,
+  baseURL: resolvedAppUrl,
 
   emailAndPassword: {
     enabled: true,
@@ -57,7 +56,7 @@ export const auth = betterAuth({
 
   plugins: [nextCookies()],
 
-  trustedOrigins: [resolvedAppUrl, "http://localhost:3000"] , // IMPORTANT: Replace with your actual deployed domains.
+  trustedOrigins: [resolvedAppUrl, "http://localhost:3000"],
 });
 
 // ─── Inferred types ───────────────────────────────────────────────────────────
