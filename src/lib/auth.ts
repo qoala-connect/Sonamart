@@ -46,7 +46,9 @@ export const auth = betterAuth({
 
   plugins: [nextCookies()],
 
-  trustedOrigins: [resolvedAppUrl, "http://localhost:3000"],
+  // Use a Set to ensure unique origins. This handles the case where resolvedAppUrl
+  // might be localhost, and also keeps the list clean.
+  trustedOrigins: [...new Set([resolvedAppUrl, "http://localhost:3000"])],
 });
 
 // ─── Inferred types ───────────────────────────────────────────────────────────
