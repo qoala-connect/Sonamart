@@ -112,6 +112,7 @@ export async function loginAction(
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY", // Used by supabaseAdmin for privileged operations
+    "DATABASE_URL", // Absolutely essential for better-auth to query users
     "NEXT_PUBLIC_APP_URL", // Crucial for Better Auth's trustedOrigins
   ];
   const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
